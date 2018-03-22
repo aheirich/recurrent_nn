@@ -1,21 +1,4 @@
-{
-  1 : FloatTensor - size: 65x64
-  2 : FloatTensor - size: 192x128
-  3 : FloatTensor - size: 128
-  4 : FloatTensor - size: 256x128
-  5 : FloatTensor - size: 128
-  6 : FloatTensor - size: 65x128
-  7 : FloatTensor - size: 65
-}
-{
-  1 : FloatTensor - size: 65x64
-  2 : FloatTensor - size: 192x128
-  3 : FloatTensor - size: 128
-  4 : FloatTensor - size: 256x128
-  5 : FloatTensor - size: 128
-  6 : FloatTensor - size: 65x128
-  7 : FloatTensor - size: 65
-}
+
 {
   1 : FloatTensor - size: 65x64
   2 : FloatTensor - size: 192x128
