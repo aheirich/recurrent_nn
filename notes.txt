@@ -1,0 +1,6 @@
+default training values for torch-rnn
+rnn_size 128
+num_layers 2
+wordvec_size 64
+dropout 0
+
