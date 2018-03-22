@@ -84,23 +84,45 @@ def readArray(file, dimensions):
   if len(dimensions) == 2: return readArray2D(file, dimensions)
 
 
+def printArray2D(array, dimensions, name):
+  print ''
+  line = 'param ' + name + ': '
+  rows = int(dimensions[0])
+  columns = int(dimensions[1])
+  for column in range(columns):
+    line = line + str(column + 1) + ' '
+  line = line + ':='
+  print line
+  for row in range(rows):
+    line = str(row + 1) + ' '
+    for column in range(columns):
+      line = line + str(array[row][column]) + ' '
+    print line
+  print ';'
+  print ''
+
+
+def printArray1D(array, dimensions, name):
+  print ''
+  print 'param ' + name + ' :='
+  rows = int(dimensions[0])
+  for row in range(rows):
+    print str(row) + ' ' + str(array[row])
+  print ';'
+  print ''
+
+
 def printArray(array, dimensions, name):
-  print ''
-  print name, '= numpy.array(['
-  for row in array: print row, ','
-  print '])'
-  print ''
+  if len(dimensions) == 1: return printArray1D(array, dimensions, name)
+  if len(dimensions) == 2: return printArray2D(array, dimensions, name)
 
 
 
 
-names = [ 'embedding', 'weights_layer1', 'bias_layer1', 'weights_layer2', 'bias_layer2',
-  'projection', 'bias_projection' ]
+names = [ 'embed', 'Winphid1', 'Bhid1', 'Whid12', 'Bhid2', 'proj', 'Bproj' ]
 file = open("trained/PRINT_MODEL.log", "r")
 format = readFormat(file)
 i = 0
-print 'import numpy'
-print ''
 for dimensions in format:
   array = readArray(file, dimensions)
   printArray(array, dimensions, names[i])
