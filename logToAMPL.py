@@ -123,6 +123,19 @@ names = [ 'embed', 'Winphid1', 'Bhid1', 'Whid12', 'Bhid2', 'proj', 'Bproj' ]
 file = open("trained/PRINT_MODEL.log", "r")
 format = readFormat(file)
 i = 0
+
+print '# layer widths'
+print 'param embedding_layer_width :=', format[0][0], ';'
+print 'param input_width :=', format[0][1], ';'
+print 'param recurrent_layer1_size :=', format[1][1], ';'
+print 'param recurrent_layer1_width := input_width + recurrent_layer1_size ;'
+print 'param recurrent_layer2_size :=', format[3][1], ';'
+print 'param recurrent_layer2_width := recurrent_layer1_size + recurrent_layer2_size ;'
+print 'param output_width :=', format[5][1], ';'
+print 'param projection_layer_width := embedding_layer_width ;'
+print ''
+
+
 for dimensions in format:
   array = readArray(file, dimensions)
   printArray(array, dimensions, names[i])
