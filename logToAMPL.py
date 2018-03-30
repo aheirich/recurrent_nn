@@ -4,7 +4,17 @@
 # Takes a log produced by PRINT_MODEL.lua and produces numpy source
 #
 
+import sys
 
+"""
+{
+  1 : FloatTensor - size: 65x64
+  2 : FloatTensor - size: 192x128
+  3 : FloatTensor - size: 128
+  4 : FloatTensor - size: 65x128
+  5 : FloatTensor - size: 65
+}
+"""
 
 def readFormat(file):
   line = ''
@@ -84,60 +94,83 @@ def readArray(file, dimensions):
   if len(dimensions) == 2: return readArray2D(file, dimensions)
 
 
-def printArray2D(array, dimensions, name):
-  print ''
-  line = 'param ' + name + ': '
+def printArray2D(array, dimensions, name, modfile, datfile):
+  modfile.write('\n')
+  datfile.write('\n')
+  modfile.write('param ' + name + '{i in 1..' + str(dimensions[0]) + ', 1..' + str(dimensions[1]) + '};\n')
+  datfile.write('param ' + name + ': ')
   rows = int(dimensions[0])
   columns = int(dimensions[1])
+  line = ''
   for column in range(columns):
     line = line + str(column + 1) + ' '
-  line = line + ':='
-  print line
+  line = line + ':= \n'
+  datfile.write(line)
   for row in range(rows):
     line = str(row + 1) + ' '
     for column in range(columns):
       line = line + str(array[row][column]) + ' '
-    print line
-  print ';'
-  print ''
+    datfile.write(line + '\n')
+  datfile.write(';\n')
+  datfile.write('\n')
 
 
-def printArray1D(array, dimensions, name):
-  print ''
-  print 'param ' + name + ' :='
+def printArray1D(array, dimensions, name, modfile, datfile):
+  modfile.write('\n')
+  datfile.write('\n')
+  modfile.write('param ' + name + '{i in 1..' + str(dimensions[0]) + '};\n')
+  datfile.write('param ' + name + ' :=\n')
   rows = int(dimensions[0])
   for row in range(rows):
-    print str(row) + ' ' + str(array[row])
-  print ';'
-  print ''
+    datfile.write(str(row + 1) + ' ' + str(array[row]) + '\n')
+  datfile.write(';\n')
+  datfile.write('\n')
 
 
-def printArray(array, dimensions, name):
-  if len(dimensions) == 1: return printArray1D(array, dimensions, name)
-  if len(dimensions) == 2: return printArray2D(array, dimensions, name)
+def printArray(array, dimensions, name, modfile, datfile):
+  if len(dimensions) == 1: return printArray1D(array, dimensions, name, modfile, datfile)
+  if len(dimensions) == 2: return printArray2D(array, dimensions, name, modfile, datfile)
 
 
 
 
-names = [ 'embed', 'Winphid1', 'Bhid1', 'Whid12', 'Bhid2', 'proj', 'Bproj' ]
-file = open("trained/PRINT_MODEL.log", "r")
+filename = "trained/PRINT_MODEL.log"
+if len(sys.argv) > 1: filename = sys.argv[1]
+
+outputname = "model_ampl"
+if len(sys.argv) > 2: outputname = sys.argv[2]
+
+file = open(filename, "r")
 format = readFormat(file)
 i = 0
 
-print '# layer widths'
-print 'param embedding_layer_width :=', format[0][0], ';'
-print 'param input_width :=', format[0][1], ';'
-print 'param recurrent_layer1_size :=', format[1][1], ';'
-print 'param recurrent_layer1_width :=', format[0][1] + format[1][1], ';'
-print 'param recurrent_layer2_size :=', format[3][1], ';'
-print 'param recurrent_layer2_width :=', format[1][1] + format[3][1], ';'
-print 'param output_width :=', format[5][1], ';'
-print 'param projection_layer_width :=', format[0][0], ';'
-print ''
+modfile = open(outputname + '.mod', 'w')
+datfile = open(outputname + '.dat', 'w')
+
 
 
 for dimensions in format:
+  name = None
+  if i == 0:
+    datfile.write('param embedding_layer_width := ' + str(format[i][0]) + ';\n')
+    datfile.write('param input_width := ' + str(format[i][1]) + ';\n')
+    modfile.write('param embedding_layer_width ;\n')
+    modfile.write('param input_width ;\n')
+    name = 'embedInputWeight'
+  elif i == len(format) - 1:
+    modfile.write('param output_width ;\n')
+    datfile.write('param output_width := ' + str(format[i][0]) + ';\n')
+    name = 'outputBias'
+  elif i % 2 == 1:
+    layerId = i / 2
+    modfile.write('param layer_' + str(layerId) + '_width ;\n')
+    datfile.write('param layer_' + str(layerId) + '_width := ' + str(format[i][0]) + ' ;\n')
+    name = 'layer_' + str(layerId) + '_weight'
+  else:
+    layerId = i / 2
+    name = 'layer_' + str(layerId) + '_bias'
+
   array = readArray(file, dimensions)
-  printArray(array, dimensions, names[i])
+  printArray(array, dimensions, name, modfile, datfile)
   i = i + 1
 
