@@ -1,3 +1,3 @@
 #!/bin/bash
 source setup.bash
-singularity run sherlock-recurrent_nn.simg
+singularity run --nv sherlock-recurrent_nn.simg
