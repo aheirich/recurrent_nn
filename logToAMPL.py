@@ -213,11 +213,12 @@ def readArray(file, dimensions):
   if len(dimensions) == 2: return numpy.array(readArray2D(file, dimensions))
 
 
-def printArray2D(array, dimensions, name, modfile, datfile, rows, columns):
+def printArray2D(array, dimensions, name, modfile, datfile, pyfile, rows, columns):
   modfile.write('\n')
   datfile.write('\n')
   modfile.write('param ' + name + '{i in 1..' + rows + ', j in 1..' + columns + '};\n')
   datfile.write('param ' + name + ': ')
+  pyfile.write(name + ' = numpy.array([\\\n')
   rows = int(dimensions[0])
   columns = int(dimensions[1])
   line = ''
@@ -227,44 +228,34 @@ def printArray2D(array, dimensions, name, modfile, datfile, rows, columns):
   datfile.write(line)
   for row in range(rows):
     line = str(row + 1) + ' '
+    pyline = '[ '
     for column in range(columns):
       line = line + str(array[row][column]) + ' '
+      pyline = pyline + str(array[row][column]) + ', '
     datfile.write(line + '\n')
+    pyfile.write(pyline + '],\\\n')
   datfile.write(';\n')
   datfile.write('\n')
+  pyfile.write('])\n\n')
 
 
-def printArray1D(array, dimensions, name, modfile, datfile, rows):
+def printArray1D(array, dimensions, name, modfile, datfile, pyfile, rows):
   modfile.write('\n')
   datfile.write('\n')
   modfile.write('param ' + name + '{i in 1..' + rows + '};\n')
   datfile.write('param ' + name + ' :=\n')
+  pyfile.write(name + ' = numpy.array([ ')
   for row in range(int(dimensions[0])):
     datfile.write(str(row + 1) + ' ' + str(array[row]) + '\n')
+    pyfile.write(str(array[row]) + ', ')
   datfile.write(';\n')
   datfile.write('\n')
+  pyfile.write('])\n\n')
 
 
-def printArray(array, dimensions, name, modfile, datfile, rows, columns):
-  if len(dimensions) == 1: return printArray1D(array, dimensions, name, modfile, datfile, rows)
-  if len(dimensions) == 2: return printArray2D(array, dimensions, name, modfile, datfile, rows, columns)
-
-
-
-
-filename = "trained/PRINT_MODEL.log"
-if len(sys.argv) > 1: filename = sys.argv[1]
-
-outputname = "model_ampl"
-if len(sys.argv) > 2: outputname = sys.argv[2]
-
-file = open(filename, "r")
-format = readFormat(file)
-i = 0
-
-modfile = open(outputname + '.mod', 'w')
-datfile = open(outputname + '.dat', 'w')
-
+def printArray(array, dimensions, name, modfile, datfile, pyfile, rows, columns):
+  if len(dimensions) == 1: return printArray1D(array, dimensions, name, modfile, datfile, pyfile, rows)
+  if len(dimensions) == 2: return printArray2D(array, dimensions, name, modfile, datfile, pyfile, rows, columns)
 
 
 def emitLayer(layerId, layerWidth, rows, columns, matrix=None):
@@ -275,7 +266,7 @@ def emitLayer(layerId, layerWidth, rows, columns, matrix=None):
   modfile.write('param layer_' + str(layerId) + '_weight{i in 1..rows_' + str(layerId) + ', j in 1..columns_' + str(layerId) + '};\n')
   modfile.write('var layer_' + str(layerId) + '{i in 1..layer_' + str(layerId) + '_width};\n')
   modfile.write('param layer_' + str(layerId) + '_bias{i in 1..layer_' + str(layerId) + '_width};\n')
-
+  
   datfile.write('param layer_' + str(layerId) + '_width := ' + str(layerWidth) + ';\n')
   datfile.write('param rows_' + str(layerId) + ' := ' + str(rows) + ';\n')
   datfile.write('param columns' + str(layerId) + ' := ' + str(columns) + ';\n')
@@ -292,15 +283,15 @@ def writeConstraints(file, layerId, isRecurrent, isBiased, isFirst):
   file.write("\n")
   file.write("# compute preactivations\n")
   file.write("subject to preactivation" + l +"{i in 1..layer_" + l + "_width}:\n")
-
+  
   if isFirst:
     file.write("z" + l + "[i] = sum{j in 1..layer_" + lm + "_width} (layer_" + lm + "_weights[i, j] * a" + lm + "[j])\n")
   else:
     file.write("z" + l + "[i] = sum{j in 1..layer_" + lm + "_width} (layer_" + l + "_weights[i, j] * a" + lm + "[j])\n")
-
+  
   if isRecurrent:
     file.write("+ sum{j in 1+layer_" + lm + "_width..rows_" + l + "} (layer_" + l + "_weights[j, i] * a" + l + "[j - layer_" + lm + "_width])\n")
-
+  
   if isBiased:
     file.write("+ layer_" + l + "_bias[i]\n")
   file.write(";\n\n")
@@ -309,6 +300,29 @@ def writeConstraints(file, layerId, isRecurrent, isBiased, isFirst):
   file.write("subject to activation" + l + "{i in 1..layer_" + l + "_width}:\n")
   file.write("a" + l + "[i] = z" + l + "[i] * (tanh(100.0*z" + l + "[i]) + 1) * 0.5;\n")
   file.write("\n")
+
+
+
+
+
+
+
+filename = "trained/PRINT_MODEL.log"
+if len(sys.argv) > 1: filename = sys.argv[1]
+
+outputname = "model_ampl"
+if len(sys.argv) > 2: outputname = sys.argv[2]
+
+print 'reading', filename, 'writing', outputname + '.*'
+
+file = open(filename, "r")
+format = readFormat(file)
+i = 0
+
+modfile = open(outputname + '.mod', 'w')
+datfile = open(outputname + '.dat', 'w')
+pyfile = open(outputname + '.py', 'w')
+pyfile.write('import numpy\n')
 
 
 for i in range(len(format)):
@@ -329,7 +343,7 @@ for i in range(len(format)):
     datfile.write("param compressed_input_width := 64;\n")
   
     array = readArray(file, dimensions)
-    printArray(array, dimensions, "layer_0_weights", modfile, datfile, "rows_0", "columns_0")
+    printArray(array, dimensions, "layer_0_weights", modfile, datfile, pyfile, "rows_0", "columns_0")
 
     modfile.write("\n# layer 1\n")
     modfile.write("param layer_1_width := compressed_input_width;\n")
@@ -343,7 +357,7 @@ for i in range(len(format)):
     array = readArray(file, dimensions)
     rows = "rows_" + str(layerId)
     columns = "columns_" + str(layerId)
-    printArray(array, dimensions, "layer_" + str(layerId) + "_bias", modfile, datfile, rows, columns)
+    printArray(array, dimensions, "layer_" + str(layerId) + "_bias", modfile, datfile, pyfile, rows, columns)
 
     isRecurrent = i < len(format) - 1
     writeConstraints(modfile, layerId, isRecurrent, True, False)
@@ -371,5 +385,5 @@ for i in range(len(format)):
     rows = "rows_" + str(layerId)
     columns = "columns_" + str(layerId)
     array = readArray(file, dimensions)
-    printArray(array, dimensions, "layer_" + str(layerId) + "_weights", modfile, datfile, rows, columns)
+    printArray(array, dimensions, "layer_" + str(layerId) + "_weights", modfile, datfile, pyfile, rows, columns)
 
