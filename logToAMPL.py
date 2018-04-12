@@ -5,6 +5,7 @@
 #
 
 import sys
+import numpy
 
 """
 {
@@ -90,14 +91,14 @@ def readArray1D(file, dimensions):
 
 
 def readArray(file, dimensions):
-  if len(dimensions) == 1: return readArray1D(file, dimensions)
-  if len(dimensions) == 2: return readArray2D(file, dimensions)
+  if len(dimensions) == 1: return numpy.array(readArray1D(file, dimensions))
+  if len(dimensions) == 2: return numpy.array(readArray2D(file, dimensions))
 
 
-def printArray2D(array, dimensions, name, modfile, datfile):
+def printArray2D(array, dimensions, name, modfile, datfile, rows, columns):
   modfile.write('\n')
   datfile.write('\n')
-  modfile.write('param ' + name + '{i in 1..' + str(dimensions[0]) + ', 1..' + str(dimensions[1]) + '};\n')
+  modfile.write('param ' + name + '{i in 1..' + rows + ', j in 1..' + columns + '};\n')
   datfile.write('param ' + name + ': ')
   rows = int(dimensions[0])
   columns = int(dimensions[1])
@@ -115,21 +116,20 @@ def printArray2D(array, dimensions, name, modfile, datfile):
   datfile.write('\n')
 
 
-def printArray1D(array, dimensions, name, modfile, datfile):
+def printArray1D(array, dimensions, name, modfile, datfile, rows):
   modfile.write('\n')
   datfile.write('\n')
-  modfile.write('param ' + name + '{i in 1..' + str(dimensions[0]) + '};\n')
+  modfile.write('param ' + name + '{i in 1..' + rows + '};\n')
   datfile.write('param ' + name + ' :=\n')
-  rows = int(dimensions[0])
-  for row in range(rows):
+  for row in range(int(dimensions[0])):
     datfile.write(str(row + 1) + ' ' + str(array[row]) + '\n')
   datfile.write(';\n')
   datfile.write('\n')
 
 
-def printArray(array, dimensions, name, modfile, datfile):
-  if len(dimensions) == 1: return printArray1D(array, dimensions, name, modfile, datfile)
-  if len(dimensions) == 2: return printArray2D(array, dimensions, name, modfile, datfile)
+def printArray(array, dimensions, name, modfile, datfile, rows, columns):
+  if len(dimensions) == 1: return printArray1D(array, dimensions, name, modfile, datfile, rows)
+  if len(dimensions) == 2: return printArray2D(array, dimensions, name, modfile, datfile, rows, columns)
 
 
 
@@ -147,30 +147,142 @@ i = 0
 modfile = open(outputname + '.mod', 'w')
 datfile = open(outputname + '.dat', 'w')
 
+"""
+  
+  i 0 ['65', '64'] a0, a1
+  i 1 ['1088', '1024'] a2
+  i 2 ['1024']
+  i 3 ['2048', '1024'] a3
+  i 4 ['1024']
+  i 5 ['65', '1024'] a4
+  i 6 ['65']
 
 
-for dimensions in format:
+
+  i==0:
+  i 0 ['65', '64']
+
+  layer 0 65
+  
+  rows0 = 65, columns0 = 64
+  weights 65 to 64
+  
+  layer 1 64
+  
+  i==1:
+  i 1 ['1088', '1024']
+
+  rows2 = 1088, columns2 = 1024
+  weights 64 + 1024 to 1024
+  
+  i==2:
+  i 2 ['1024']
+
+  bias 1024
+  
+  i==3:
+  i 3 ['2048', '1024']
+
+  layer 2 1024
+  
+  rows3 = 2048, columns3 = 1024
+  weights 1024 + 1024 to 1024
+  
+  i==4:
+  i 4 ['1024']
+
+  bias 1024
+  
+  i==5:
+  i 5 ['65', '1024']
+
+  layer 3 1024
+  
+  rows4 = 65, columns4 = 1024
+  weights 1024 to 65
+  
+  i==6:
+  bias 65
+  i 6 ['65']
+
+  layer 4 65
+  
+  
+  
+  """
+
+
+def emitLayer(layerId, layerWidth, rows, columns, matrix=None):
+  modfile.write('# layer ' + str(layerId) + '\n')
+  modfile.write('param layer_' + str(layerId) + '_width;\n')
+  modfile.write('param rows_' + str(layerId) + ';\n')
+  modfile.write('param columns_' + str(layerId) + ';\n')
+  modfile.write('param layer_' + str(layerId) + '_weight{i in 1..rows_' + str(layerId) + ', j in 1..columns_' + str(layerId) + '};\n')
+  modfile.write('var layer_' + str(layerId) + '{i in 1..layer_' + str(layerId) + '_width};\n')
+  modfile.write('param layer_' + str(layerId) + '_bias{i in 1..layer_' + str(layerId) + '_width};\n')
+
+  datfile.write('param layer_' + str(layerId) + '_width := ' + str(layerWidth) + ';\n')
+  datfile.write('param rows_' + str(layerId) + ' := ' + str(rows) + ';\n')
+  datfile.write('param columns' + str(layerId) + ' := ' + str(columns) + ';\n')
+
+
+
+for i in range(len(format)):
   name = None
+  dimensions = format[i]
+  print 'i', i, dimensions
+  
   if i == 0:
-    datfile.write('param embedding_layer_width := ' + str(format[i][0]) + ';\n')
-    datfile.write('param input_width := ' + str(format[i][1]) + ';\n')
-    modfile.write('param embedding_layer_width ;\n')
-    modfile.write('param input_width ;\n')
-    name = 'embedInputWeight'
-  elif i == len(format) - 1:
-    modfile.write('param output_width ;\n')
-    datfile.write('param output_width := ' + str(format[i][0]) + ';\n')
-    name = 'outputBias'
-  elif i % 2 == 1:
-    layerId = i / 2
-    modfile.write('param layer_' + str(layerId) + '_width ;\n')
-    datfile.write('param layer_' + str(layerId) + '_width := ' + str(format[i][0]) + ' ;\n')
-    name = 'layer_' + str(layerId) + '_weight'
-  else:
-    layerId = i / 2
-    name = 'layer_' + str(layerId) + '_bias'
+    modfile.write("param one_hot_encoding_width;\n")
+    modfile.write("param compressed_input_width;\n")
+    modfile.write("\n# layer 0\n")
+    modfile.write("param rows_0 := one_hot_encoding_width;\n")
+    modfile.write("param columns_0 := compressed_input_width;\n")
+    modfile.write("param layer_0_width := one_hot_encoding_width;\n")
+    modfile.write("var a0{i in 1..layer_0_width};\n")
+    
+    datfile.write("param one_hot_encoding_width := 65;\n")
+    datfile.write("param compressed_input_width := 64;\n")
+  
+    array = readArray(file, dimensions)
+    printArray(array, dimensions, "layer_0_weights", modfile, datfile, "rows_0", "columns_0")
 
-  array = readArray(file, dimensions)
-  printArray(array, dimensions, name, modfile, datfile)
-  i = i + 1
+    modfile.write("\n# layer 1\n")
+    modfile.write("param layer_1_width;\n")
+    modfile.write("var a1{i in 1..layer_1_width};\n")
+    modfile.write("var z1{i in 1..layer_1_width};\n")
+
+
+  elif (i % 2) == 0:
+    layerId = (i - 1) / 2 + 2
+    array = readArray(file, dimensions)
+    rows = "rows_" + str(layerId)
+    columns = "columns_" + str(layerId)
+    printArray(array, dimensions, "layer_" + str(layerId) + "_bias", modfile, datfile, rows, columns)
+
+
+
+  else:
+    layerId = (i - 1) / 2 + 2
+    
+    modfile.write("\n# layer " + str(layerId) + "\n")
+    modfile.write("param rows_" + str(layerId) + ";\n")
+    modfile.write("param columns_" + str(layerId) + ";\n")
+
+    if i == len(format) - 2:
+      modfile.write("param layer_" + str(layerId) + "_width;\n")
+      datfile.write("param layer_" + str(layerId) + "_width := 65;\n")
+    else:
+      modfile.write("param layer_" + str(layerId) + "_width := rows_" + str(layerId) + " - layer_" + str(layerId - 1) + "_width;\n")
+
+    modfile.write("var a_" + str(layerId) + "{i in 1..layer_" + str(layerId) + "_width};\n")
+    modfile.write("var z_" + str(layerId) + "{i in 1..layer_" + str(layerId) + "_width};\n")
+
+    datfile.write("param rows_" + str(layerId) + " := " + str(dimensions[0]) + ";\n")
+    datfile.write("param columns_" + str(layerId) + " := " + str(dimensions[1]) + ";\n")
+  
+    rows = "rows_" + str(layerId)
+    columns = "columns_" + str(layerId)
+    array = readArray(file, dimensions)
+    printArray(array, dimensions, "layer_" + str(layerId) + "_weights", modfile, datfile, rows, columns)
 
