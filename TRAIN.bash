@@ -23,7 +23,7 @@ mkdir -p ${SCRATCH}/cv
 
 for NUM_LAYERS in 2
 do
-  for NUM_UNITS_PER_LAYER in 1024 
+  for NUM_UNITS_PER_LAYER in 128 
   do
     DESCRIPTOR="_${NUM_LAYERS}_${NUM_UNITS_PER_LAYER}"
     PREFIX="${SCRATCH}/cv"
