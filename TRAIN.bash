@@ -56,7 +56,7 @@ do
     ls -1 ${CHECKPOINT_NAME}_*.t7 | sed -e "s:${CHECKPOINT_NAME}_::" | sed -e "s:.t7::" > ${CK_TMP_FILE}
     BATCH_NUMBER=`sort -n < ${CK_TMP_FILE} | tail -1`
     CHECKPOINT_PATH="${CHECKPOINT_NAME}_${BATCH_NUMBER}.t7"
-    TMP_LOG=${TORCH_RNN_PATH}/tmplog
+    TMP_LOG=${TORCH_RNN_PATH}/${MODELNAME}.${DESCRIPTOR}_model.log
     th ${TORCH_RNN_PATH}/PRINT_MODEL.lua -checkpoint ${CHECKPOINT_PATH} > ${TMP_LOG}
     python ${TORCH_RNN_PATH}/logToAMPL.py ${TMP_LOG} ${CHECKPOINT_NAME}
 

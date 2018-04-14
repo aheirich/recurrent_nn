@@ -202,11 +202,18 @@ def readToStart1D(file):
 def readArray1D(file, dimensions):
   rows = int(dimensions[0])
   words = readToStart1D(file)
-  array = [ float(words[1]) ]
-  for row in range(rows - 1):
+  multiplier = 1
+  numValues = rows
+  array = []
+  if len(words) == 6 and words[5] == '*':
+    multiplier = float(words[4])
+  elif len(words) == 6:
+    array = [float(words[5])]
+    numValues = numValues - 1
+  for row in range(numValues):
     line = file.readline().strip()
     value = float(line)
-    array.append(value)
+    array.append(value * multiplier)
   return array
 
 
@@ -300,9 +307,9 @@ def writeConstraints(file, layerId, isRecurrent, isBiased, isFirst, isLast):
     file.write("+ layer_" + l + "_bias[i]\n")
   file.write(";\n\n")
 
-  file.write("# compute Relu activations\n")
+  file.write("# compute tanh activations\n")
   file.write("subject to activation" + l + "{i in 1..layer_" + l + "_width}:\n")
-  file.write("a" + l + "[i] = z" + l + "[i] * (tanh(100.0*z" + l + "[i]) + 1) * 0.5;\n")
+  file.write("a" + l + "[i] = tanh(z" + l + "[i]);\n")
   file.write("\n")
 
 
