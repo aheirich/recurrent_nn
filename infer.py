@@ -4,6 +4,7 @@ import sys
 import math
 import numpy
 import model_ampl as M
+import tokenTable as T
 
 VERBOSE = False
 
@@ -54,6 +55,10 @@ def infer(x):
   if VERBOSE: print 'z4', z4
   return z4
 
+
+
+
+
 if len(sys.argv) == 3:
   startChar = int(sys.argv[1])
   length = int(sys.argv[2])
@@ -65,6 +70,7 @@ else:
 a0 = [0] * 65
 a0[startChar] = 1
 print 'starting character index', startChar
+text = T.tokenTable[startChar + 1]
 
 for i in range(length):
   print 'x', a0
@@ -76,6 +82,7 @@ for i in range(length):
   for j in range(len(z4)):
     if z4[j] == maxx:
       a0[j] = 1
-      print 'maximum character index', j
+      print 'maximum character index', j, T.tokenTable[j + 1]
+      text = text + T.tokenTable[j + 1]
     else: a0[j] = 0
-
+print text
