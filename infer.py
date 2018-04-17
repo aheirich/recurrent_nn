@@ -56,23 +56,33 @@ def infer(x):
   return z4
 
 
-
+def writeInversionTarget(character, file, z4):
+  file.write('# ' + character + '\n')
+  file.write('param y_target :=\n')
+  for i in range(len(z4)):
+    file.write(str(i + 1) + ' ' + str(z4[i]) + '\n')
+  file.write(';\n\n')
 
 
 if len(sys.argv) == 3:
-  startChar = int(sys.argv[1])
+  startChar = sys.argv[1]
   length = int(sys.argv[2])
 else:
-  print 'must provide starting character index, output length'
-  print 'eg 43 2'
+  print 'must provide starting character, output length'
+  print 'eg b 128'
   sys.exit(1)
 
 a0 = [0] * 65
-a0[startChar] = 1
-print 'starting character index', startChar
-text = T.tokenTable[startChar + 1]
+for i in range(len(T.tokenTable)):
+  if T.tokenTable[i + 1] == startChar:
+    a0[i] = 1
+    break
+text = startChar
 
-for i in range(length):
+file = open("y_target.dat", "w")
+
+
+for i in range(length - 1):
   print 'x', a0
   z4 = infer(a0)
   print 'y', z4
@@ -82,7 +92,13 @@ for i in range(length):
   for j in range(len(z4)):
     if z4[j] == maxx:
       a0[j] = 1
-      print 'maximum character index', j, T.tokenTable[j + 1]
-      text = text + T.tokenTable[j + 1]
+      nextCharacter = T.tokenTable[j + 1]
+      print 'maximum character index', j, nextCharacter
+      text = text + nextCharacter
+      writeInversionTarget(nextCharacter, file, z4)
     else: a0[j] = 0
+
 print text
+
+file.write('# ' + text + '\n')
+file.close()

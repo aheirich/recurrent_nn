@@ -309,7 +309,10 @@ def writeConstraints(file, layerId, isRecurrent, isBiased, isFirst, isLast):
 
   file.write("# compute tanh activations\n")
   file.write("subject to activation" + l + "{i in 1..layer_" + l + "_width}:\n")
-  file.write("a" + l + "[i] = tanh(z" + l + "[i]);\n")
+  if layerId == 1:
+    file.write("a1[i] = z1[i];\n")
+  else:
+    file.write("a" + l + "[i] = tanh(z" + l + "[i]);\n")
   file.write("\n")
 
 
@@ -334,6 +337,7 @@ modfile = open(outputname + '.mod', 'w')
 datfile = open(outputname + '.dat', 'w')
 pyfile = open(outputname + '.py', 'w')
 pyfile.write('import numpy\n')
+pyfile.write('numHiddenLayer = ' + str((len(format) - 3) / 2) + '\n')
 
 
 for i in range(len(format)):
