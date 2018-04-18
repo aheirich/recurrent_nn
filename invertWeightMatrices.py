@@ -6,7 +6,7 @@
 import sys
 import numpy
 
-import model_ampl as M
+import elman_shakespeare._2_1024 as M
 
 
 def printMatrix(M, name, modfile, datfile):
@@ -23,12 +23,21 @@ def printMatrix(M, name, modfile, datfile):
     i = i + 1
   datfile.write(';\n')
 
+filename = "trained/elman_shakespeare._2_1024_178000.t7"
+if len(sys.argv > 1):
+  filename = sys.argv[1]
 
-modfile = open("model_inverse.mod", "w")
-datfile = open("model_inverse.dat", "w")
+modfile = open(filename + ".inverse.mod", "w")
+datfile = open(filename + ".inverse.dat", "w")
+
+print 'layer 0'
+weight0Inverse = numpy.linalg.pinv(M.layer_0_weights)
+printMatrix(weight0Inverse, 'layer_0_weights_feedforward_inverse', modfile, datfile)
+
 
 for i in range(M.numHiddenLayers):
   layerId = i + 2
+  print 'layer', layerId
   W = 'M.layer_' + str(layerId) + '_weights'
   numFeedForwardWeights = eval(W + '.shape[0] - ' + W + '.shape[1]')
   left = eval(W + '[0:' + str(numFeedForwardWeights) + ']')
@@ -36,6 +45,11 @@ for i in range(M.numHiddenLayers):
   leftInverse = numpy.linalg.pinv(left)
   printMatrix(leftInverse, 'layer_' + str(layerId) + '_weights_feedforward_inverse', modfile, datfile)
   printMatrix(right, 'layer_' + str(layerId) + '_weights_recurrent', modfile, datfile)
+
+lastLayerId = M.numHiddenLayers + 2
+print 'layer', lastLayerId
+weightLastInverse = numpy.linalg.pinv(eval('M.layer_' + str(lastLayerId) + '_weights'))
+printMatrix(weightLastInverse, 'layer_' + str(lastLayerId) + '_weights_feedforward_inverse', modfile, datfile)
 
 modfile.close()
 datfile.close()

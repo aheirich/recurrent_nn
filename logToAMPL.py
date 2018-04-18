@@ -8,133 +8,34 @@ import sys
 import numpy
 
 """
-
-dimensions for elman network with 2 hidden layers of 1024 neurons each:
-
-i 0 ['65', '64'] a0, a1
-i 1 ['1088', '1024'] a2
-i 2 ['1024']
-i 3 ['2048', '1024'] a3
-i 4 ['1024']
-i 5 ['65', '1024'] a4
-i 6 ['65']
-
-model file:
-
-param one_hot_encoding_width;
-param compressed_input_width;
-
-# layer 0
-param rows_0 := one_hot_encoding_width;
-param columns_0 := compressed_input_width;
-param layer_0_width := one_hot_encoding_width;
-var a0{i in 1..layer_0_width};
-
-param layer_0_weights{i in 1..rows_0, j in 1..columns_0};
-
-# layer 1
-param layer_1_width := compressed_input_width;
-var a1{i in 1..layer_1_width};
-var z1{i in 1..layer_1_width};
-
-# range constraints
-subject to rangemax1{i in 1..layer_1_width}: z1[i] <= 10;
-subject to rangemin1{i in 1..layer_1_width}: z1[i] >= -10;
-
-# compute preactivations
-subject to preactivation1{i in 1..layer_1_width}:
-z1[i] = sum{j in 1..layer_0_width} (layer_0_weights[j, i] * a0[j])
-;
-
-# compute Relu activations
-subject to activation1{i in 1..layer_1_width}:
-a1[i] = z1[i] * (tanh(100.0*z1[i]) + 1) * 0.5;
-
-
-# layer 2
-param rows_2;
-param columns_2;
-param layer_2_width := rows_2 - layer_1_width;
-var a2{i in 1..layer_2_width};
-var z2{i in 1..layer_2_width};
-
-param layer_2_weights{i in 1..rows_2, j in 1..columns_2};
-
-param layer_2_bias{i in 1..rows_2};
-
-# range constraints
-subject to rangemax2{i in 1..layer_2_width}: z2[i] <= 10;
-subject to rangemin2{i in 1..layer_2_width}: z2[i] >= -10;
-
-# compute preactivations
-subject to preactivation2{i in 1..layer_2_width}:
-z2[i] = sum{j in 1..layer_1_width} (layer_2_weights[j, i] * a1[j])
-+ sum{j in 1+layer_1_width..rows_2} (layer_2_weights[j, i] * a2[j - layer_1_width])
-+ layer_2_bias[i]
-;
-
-# compute Relu activations
-subject to activation2{i in 1..layer_2_width}:
-a2[i] = z2[i] * (tanh(100.0*z2[i]) + 1) * 0.5;
-
-
-# layer 3
-param rows_3;
-param columns_3;
-param layer_3_width := rows_3 - layer_2_width;
-var a3{i in 1..layer_3_width};
-var z3{i in 1..layer_3_width};
-
-param layer_3_weights{i in 1..rows_3, j in 1..columns_3};
-
-param layer_3_bias{i in 1..rows_3};
-
-# range constraints
-subject to rangemax3{i in 1..layer_3_width}: z3[i] <= 10;
-subject to rangemin3{i in 1..layer_3_width}: z3[i] >= -10;
-
-# compute preactivations
-subject to preactivation3{i in 1..layer_3_width}:
-z3[i] = sum{j in 1..layer_2_width} (layer_3_weights[j, i] * a2[j])
-+ sum{j in 1+layer_2_width..rows_3} (layer_3_weights[j, i] * a3[j - layer_2_width])
-+ layer_3_bias[i]
-;
-
-# compute Relu activations
-subject to activation3{i in 1..layer_3_width}:
-a3[i] = z3[i] * (tanh(100.0*z3[i]) + 1) * 0.5;
-
-
-# layer 4
-param rows_4;
-param columns_4;
-param layer_4_width;
-var a4{i in 1..layer_4_width};
-var z4{i in 1..layer_4_width};
-
-param layer_4_weights{i in 1..rows_4, j in 1..columns_4};
-
-param layer_4_bias{i in 1..rows_4};
-
-# range constraints
-subject to rangemax4{i in 1..layer_4_width}: z4[i] <= 10;
-subject to rangemin4{i in 1..layer_4_width}: z4[i] >= -10;
-
-# compute preactivations
-subject to preactivation4{i in 1..layer_4_width}:
-z4[i] = sum{j in 1..layer_3_width} (layer_3_weights[i, j] * a3[j])
-+ layer_4_bias[i]
-;
-
-# compute Relu activations
-subject to activation4{i in 1..layer_4_width}:
-a4[i] = z4[i] * (tanh(100.0*z4[i]) + 1) * 0.5;
-
-
-
-
+  How to invert the elman_shakespeare_2_1024 recurrent network
+  a2(t) means a2 at time t
   
-  """
+  Given z4
+  1) Find a3(1) = w4^-1 z4
+  
+  Given a3(1) [1024], find a2(1)
+  
+  a3(1) = tanh( A a3(0) + B a2(1) + bias3 )
+  ..
+  atanh(a3(1)) = A a3(0) + B a2(1) + bias3
+  ..
+  2) a2(1) = B^-1 ( atanh( a3(1) ) - A a3(0) - bias3 ) ***
+  
+  Where A is the recurrent dense connections in weights_3.
+  And B is the non recurrent dense connections from layer 2 in weights_3.
+  [1024] = [1024] - [1024]
+  
+  One equation in two unknowns, a2(1) and a3(0)
+  
+  Given a2(1), or constraint
+  3) a1(1) = D^-1 ( atanh( a2(1) ) - C a2(0) - bias2 ) ***
+  
+  One equation in two unknowns, a1(1) and a2(0)
+  
+  Given a1, or constraint
+  4) Find a0(1) = W1^-1 a1(1)
+"""
 
 
 def readFormat(file):
@@ -283,7 +184,7 @@ def emitLayer(layerId, layerWidth, rows, columns, matrix=None):
 
 def writeConstraints(file, layerId, isRecurrent, isBiased, isFirst, isLast):
   file.write("\n# range constraints\n")
-  rangeLimit = 10
+  rangeLimit = 100
   l = str(layerId)
   lm = str(layerId - 1)
   
@@ -321,24 +222,49 @@ def writeConstraints(file, layerId, isRecurrent, isBiased, isFirst, isLast):
 
 
 
-filename = "trained/PRINT_MODEL.log"
+filename = "trained/elman_shakespeare._2_1024_178000.t7"
 if len(sys.argv) > 1: filename = sys.argv[1]
 
-outputname = "model_ampl"
+outputname = filename
 if len(sys.argv) > 2: outputname = sys.argv[2]
+
+steps = 16
+if len(sys.argv) > 3: steps = int(sys.argv[2])
 
 print 'reading', filename, 'writing', outputname + '.*'
 
 file = open(filename, "r")
 format = readFormat(file)
+lastLayerId = (len(format) - 2) / 2 + 2
+
 i = 0
 
-modfile = open(outputname + '.mod', 'w')
-datfile = open(outputname + '.dat', 'w')
-pyfile = open(outputname + '.py', 'w')
+outputFilename = outputname + '_' + str(steps)
+modfile = open(outputFilename + '.mod', 'w')
+datfile = open(outputFilename + '.dat', 'w')
+pyfile = open(outputFilename + '.py', 'w')
 pyfile.write('import numpy\n')
-pyfile.write('numHiddenLayer = ' + str((len(format) - 3) / 2) + '\n')
+numHiddenLayers = (len(format) - 3) / 2
+pyfile.write('numHiddenLayers = ' + str(numHiddenLayers) + '\n')
 
+modfile.write("param one_hot_encoding_width;\n")
+modfile.write("param compressed_input_width;\n")
+
+modfile.write("param rows_0 := one_hot_encoding_width;\n")
+
+for i in range(numHiddenLayers):
+  modfile.write('param rows_' + str(i + 2) + ';\n')
+  datfile.write('param rows_' + str(i + 2) + ' := ' + str(format[i * 2 + 1][0]) + ';\n')
+modfile.write("param rows_" + str(lastLayerId) + ";\n")
+modfile.write('\n')
+
+
+modfile.write("param layer_0_width := one_hot_encoding_width;\n")
+modfile.write('param layer_1_width := compressed_input_width;\n')
+for i in  range(numHiddenLayers):
+  modfile.write('param layer_' + str(i + 2) + '_width := rows_' + str(i + 2) + ' - layer_' + str(i + 1) + '_width;\n')
+modfile.write('param layer_' + str(lastLayerId) + '_width;\n')
+datfile.write('param layer_' + str(lastLayerId) + '_width := ' + str(format[-2][0]) + ';\n')
 
 for i in range(len(format)):
   name = None
@@ -346,60 +272,114 @@ for i in range(len(format)):
   print 'i', i, dimensions
   
   if i == 0:
-    modfile.write("param one_hot_encoding_width;\n")
-    modfile.write("param compressed_input_width;\n")
     modfile.write("\n# layer 0\n")
-    modfile.write("param rows_0 := one_hot_encoding_width;\n")
     modfile.write("param columns_0 := compressed_input_width;\n")
-    modfile.write("param layer_0_width := one_hot_encoding_width;\n")
-    modfile.write("var a0{i in 1..layer_0_width};\n")
     
     datfile.write("param one_hot_encoding_width := 65;\n")
     datfile.write("param compressed_input_width := 64;\n")
   
     array = readArray(file, dimensions)
     printArray(array, dimensions, "layer_0_weights", modfile, datfile, pyfile, "rows_0", "columns_0")
-
-    modfile.write("\n# layer 1\n")
-    modfile.write("param layer_1_width := compressed_input_width;\n")
-    modfile.write("var a1{i in 1..layer_1_width};\n")
-    modfile.write("var z1{i in 1..layer_1_width};\n")
-
-    writeConstraints(modfile, 1, False, False, True, False)
+  
 
   elif (i % 2) == 0:
     layerId = (i - 1) / 2 + 2
     array = readArray(file, dimensions)
     rows = "rows_" + str(layerId)
     columns = "columns_" + str(layerId)
-    printArray(array, dimensions, "layer_" + str(layerId) + "_bias", modfile, datfile, pyfile, rows, columns)
-
-    isLast = i == len(format) - 1
-    isRecurrent = not isLast
-    writeConstraints(modfile, layerId, isRecurrent, True, False, isLast)
-
+    printArray(array, dimensions, "layer_" + str(layerId) + "_bias", modfile, datfile, pyfile, 'layer_' + str(layerId) + '_width', None)
 
   else:
     layerId = (i - 1) / 2 + 2
     
     modfile.write("\n# layer " + str(layerId) + "\n")
-    modfile.write("param rows_" + str(layerId) + ";\n")
     modfile.write("param columns_" + str(layerId) + ";\n")
 
-    if i == len(format) - 2:
-      modfile.write("param layer_" + str(layerId) + "_width;\n")
-      datfile.write("param layer_" + str(layerId) + "_width := 65;\n")
-    else:
-      modfile.write("param layer_" + str(layerId) + "_width := rows_" + str(layerId) + " - layer_" + str(layerId - 1) + "_width;\n")
-
-    modfile.write("var a" + str(layerId) + "{i in 1..layer_" + str(layerId) + "_width};\n")
-    modfile.write("var z" + str(layerId) + "{i in 1..layer_" + str(layerId) + "_width};\n")
-
-    datfile.write("param rows_" + str(layerId) + " := " + str(dimensions[0]) + ";\n")
     datfile.write("param columns_" + str(layerId) + " := " + str(dimensions[1]) + ";\n")
   
     rows = "rows_" + str(layerId)
     columns = "columns_" + str(layerId)
     array = readArray(file, dimensions)
     printArray(array, dimensions, "layer_" + str(layerId) + "_weights", modfile, datfile, pyfile, rows, columns)
+
+
+def name(variable, layerId, step):
+  return variable + str(layerId) + '_' + str(step)
+
+lastLayerId = (len(format) - 2) / 2 + 2
+
+for t in range(steps - 1, -1, -1):
+  a0 = name('a', 0, t)
+  modfile.write('var ' + a0 + '{i in 1..layer_0_width};\n')
+  a1 = name('a', 1, t)
+  modfile.write('var ' + a1 + '{i in 1..layer_1_width};\n')
+  
+  for i in range(numHiddenLayers):
+    layerId = i + 2
+    z = name('z', layerId, t)
+    modfile.write('var ' + z + '{i in 1..layer_' + str(layerId) + '_width};\n')
+    a = name('a', layerId, t)
+    modfile.write('var ' + a + '{i in 1..layer_' + str(layerId) + '_width};\n')
+  
+  zLast = name('z', lastLayerId, t)
+  modfile.write('var ' + zLast + '{i in 1..layer_' + str(lastLayerId) + '_width};\n')
+
+modfile.write('param y_target{i in 1..layer_' + str(lastLayerId) + '_width};\n')
+modfile.write('minimize loss{i in 1..layer_' + str(lastLayerId) + '_width}: ')
+modfile.write('(y_target[i] - z' + str(lastLayerId) + '_' + str(steps - 1) + '[i])^2;\n')
+
+for t in range(steps - 1, -1, -1):
+  modfile.write('\n# step ' + str(t) + '\n')
+  a0 = name('a', 0, t)
+  a1 = name('a', 1, t)
+  zLast = name('z', lastLayerId, t)
+
+  modfile.write('\n')
+  modfile.write('subject to target_' + str(t) + '{i in 1..layer_0_width}:\n')
+  if t == steps - 1:
+    modfile.write('z' + str(lastLayerId) + '_' + str(t) + '[i] = y_target[i];\n')
+  else:
+    modfile.write('z' + str(lastLayerId) + '_' + str(t) + '[i] = a0_' + str(t + 1) + '[i];\n')
+
+  for i in range(numHiddenLayers, 0, -1):
+    layerId = i + 1
+    z = name('z', layerId, t)
+    aP = name('a', layerId + 1, t)
+    a = name('a', layerId, t)
+    aPPrevious = name('a', layerId + 1, t - 1)
+    zP = name('z', layerId + 1, t)
+
+    modfile.write('\n')
+    modfile.write('subject to activation' + str(layerId) + '_' + str(t))
+    modfile.write('{i in 1..layer_' + str(layerId) + '_width}:\n')
+    modfile.write(a + '[i] = sum{j in 1..layer_' + str(layerId + 1) + '_width} ')
+    modfile.write('layer_' + str(layerId + 1) + '_weights_feedforward_inverse')
+    if layerId + 1 == lastLayerId:
+      modfile.write('[i, j] * ' + zP + '[j];\n')
+    else:
+      modfile.write('[j, i] * ( ' + zP + '[j] - \n')
+      if t > 0:
+        modfile.write('sum{k in 1..layer_' + str(layerId + 1) + '_width} ')
+        modfile.write('layer_' + str(layerId + 1) + '_weights_recurrent[k, j] * ' + aPPrevious + '[k] - ')
+      modfile.write('layer_' + str(layerId + 1) + '_bias[j] );\n')
+    
+    modfile.write('subject to preactivation' + str(layerId) + '_' + str(t))
+    modfile.write('{i in 1..layer_' + str(layerId) + '_width}:\n')
+    modfile.write(z + '[i] = atanh(' + a + '[i]);\n')
+
+  modfile.write('\n')
+  modfile.write('subject to activation1_' + str(t) + '{i in 1..layer_1_width}:\n')
+  modfile.write(a1 + '[i] = sum{j in 1..layer_2_width} ')
+  modfile.write('layer_2_weights_feedforward_inverse[j, i] * ')
+  modfile.write('( z2_' + str(t) + '[j] -\n')
+  if t > 0:
+    a2M = name('a', 2, t - 1)
+    modfile.write('sum{k in 1..layer_' + str(layerId) + '_width} layer_2_weights_recurrent[k, j] * ' + a2M + '[k] - ')
+  modfile.write('layer_2_bias[j] );\n')
+
+  modfile.write('\n')
+  modfile.write('subject to activation0_' + str(t) + '{i in 1..layer_0_width}:\n')
+  modfile.write(a0 + '[i] = sum{j in 1..layer_1_width} layer_0_weights_feedforward_inverse[j, i] * ' + a1 + '[j];\n')
+                
+
 

@@ -6,8 +6,8 @@ all:  model_ampl.py model_inverse.dat
 $(SOURCE_LOG):  $(SOURCE_MODEL)
 	th PRINT_MODEL.lua -checkpoint $(SOURCE_MODEL) > $@
 
-model_ampl.py:  $(SOURCE_LOG)
-	python logToAmpl.py $<
+model_ampl.py:  $(SOURCE_LOG) logToAMPL.py
+	python logToAMPL.py $<
 
 model_inverse.dat: model_ampl.py invertWeightMatrices.py
 	python invertWeightMatrices.py 
