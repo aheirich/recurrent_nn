@@ -222,10 +222,10 @@ def writeConstraints(file, layerId, isRecurrent, isBiased, isFirst, isLast):
 
 
 
-filename = "trained/elman_shakespeare._2_1024_178000.t7"
+filename = "trained/elman_shakespeare_2_1024_178000.t7"
 if len(sys.argv) > 1: filename = sys.argv[1]
 
-outputname = filename
+outputname = "trained/elman_shakespeare_2_1024"
 if len(sys.argv) > 2: outputname = sys.argv[2]
 
 steps = 16
@@ -242,7 +242,7 @@ i = 0
 outputFilename = outputname + '_' + str(steps)
 modfile = open(outputFilename + '.mod', 'w')
 datfile = open(outputFilename + '.dat', 'w')
-pyfile = open(outputFilename + '.py', 'w')
+pyfile = open(outputname + '.py', 'w')
 pyfile.write('import numpy\n')
 numHiddenLayers = (len(format) - 3) / 2
 pyfile.write('numHiddenLayers = ' + str(numHiddenLayers) + '\n')

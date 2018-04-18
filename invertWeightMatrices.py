@@ -6,7 +6,7 @@
 import sys
 import numpy
 
-import elman_shakespeare._2_1024 as M
+import elman_shakespeare_2_1024 as M
 
 
 def printMatrix(M, name, modfile, datfile):
@@ -23,12 +23,12 @@ def printMatrix(M, name, modfile, datfile):
     i = i + 1
   datfile.write(';\n')
 
-filename = "trained/elman_shakespeare._2_1024_178000.t7"
-if len(sys.argv > 1):
+filename = "trained/elman_shakespeare_2_1024"
+if len(sys.argv) > 1:
   filename = sys.argv[1]
 
-modfile = open(filename + ".inverse.mod", "w")
-datfile = open(filename + ".inverse.dat", "w")
+modfile = open(filename + "_inverse.mod", "w")
+datfile = open(filename + "_inverse.dat", "w")
 
 print 'layer 0'
 weight0Inverse = numpy.linalg.pinv(M.layer_0_weights)
