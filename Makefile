@@ -7,7 +7,7 @@ INVERSE=$(SOURCE_LOG)_inverse.dat
 all:  $(MOD) $(INVERSE)
 
 $(SOURCE_LOG):  $(SOURCE_MODEL)
-	cd torch-rnn && th ../PRINT_MODEL.lua -checkpoint ../$(SOURCE_MODEL) -gpu -1 > ../$@
+	cd myTorch-rnn && th ../PRINT_MODEL.lua -checkpoint ../$(SOURCE_MODEL) -gpu -1 > ../$@
 
 $(PY):
 $(MOD):  $(SOURCE_LOG) logToAMPL.py
